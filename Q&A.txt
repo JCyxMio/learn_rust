@@ -1,0 +1,242 @@
+
+1.
+// 填空
+struct A;          // 具体的类型 `A`.
+struct S(A);       // 具体的类型 `S`.
+struct SGen<T>(T); // 泛型 `SGen`.
+
+fn reg_fn(_s: S) {}
+
+fn gen_spec_t(_s: SGen<A>) {}
+
+fn gen_spec_i32(_s: SGen<i32>) {}
+
+fn generic<T>(_s: SGen<T>) {}
+
+fn main() {
+    // 使用非泛型函数
+    reg_fn(__);          // 具体的类型
+    gen_spec_t(__);   // 隐式地指定类型参数  `A`.
+    gen_spec_i32(__); // 隐式地指定类型参数`i32`.
+
+    // 显式地指定类型参数 `char`
+    generic::<char>(__);
+
+    // 隐式地指定类型参数 `char`.
+    generic(__);
+}
+
+
+// 填空
+struct A;          // 具体的类型 `A`.
+struct S(A);       // 具体的类型 `S`.
+struct SGen<T>(T); // 泛型 `SGen`.
+
+fn reg_fn(_s: S) {}
+
+fn gen_spec_t(_s: SGen<A>) {}
+
+fn gen_spec_i32(_s: SGen<i32>) {}
+
+fn generic<T>(_s: SGen<T>) {}
+
+fn main() {
+    // 使用非泛型函数
+    reg_fn(S(A));          // 具体的类型
+    gen_spec_t(SGen(A));   // 隐式地指定类型参数  `A`.
+    gen_spec_i32(SGen(1)); // 隐式地指定类型参数`i32`.
+
+    // 显式地指定类型参数 `char`
+    generic::<char>(SGen('a'));
+
+    // 隐式地指定类型参数 `char`.
+    generic(SGen('a'));
+}
+2.
+使用泛型参数前，依然需要提前声明：impl<T>，只有提前声明了，我们才能在Point<T>中使用它，这样 Rust 就知道
+ Point 的尖括号中的类型是泛型而不是具体类型。需要注意的是，这里的 Point<T> 不再是泛型声明，而是一个完整的结构体类型，
+ 因为我们定义的结构体就是 Point<T> 而不再是 Point。
+
+3.
+除了结构体中的泛型参数，我们还能在该结构体的方法中定义额外的泛型参数，就跟泛型函数一样：
+impl<T, U> Point<T, U> {
+    fn mixup<V, W>(self, other: Point<V, W>) -> Point<T, W> {
+        Point {
+            x: self.x,
+            y: other.y,
+        }
+    }
+}
+4.
+#[derive(Debug)]
+struct Point<T, U> {
+    x: T,
+    y: U,
+}
+
+impl<T, U> Point<T, U> {
+    // 实现 mixup，不要修改其它代码！
+    //              ↓   此处所有权发生转移
+    fn mixup<X,V>(self,point:Point<X,V>)->Point<T,V>{
+        Point{
+            x:self.x,
+            y:point.y
+        }
+    }
+}
+
+fn main() {
+    let p1 = Point { x: 5, y: 10 };
+    let p2 = Point { x: "Hello", y: '中'};
+
+    let p3 = p1.mixup(p2);
+
+    assert_eq!(p3.x, 5);
+    assert_eq!(p3.y, '中');
+    // println!("{:?}",p1);//为什么p1,p2没有所有权了
+    // println!("{:?}",p2);
+    println!("{:?}",p3);
+}
+// p1在mixup时使用了self，self会把所有权转移，所以在调用mixup时p1的所有权已经转移
+
+5. 如果不适用derive而使用重载方式实现==的比较，应该怎么写
+
+// 修复错误，不要修改 `main` 中的代码!
+use std::ops;
+
+struct Foo;
+struct Bar;
+#[derive(Debug,PartialEq)]
+struct FooBar;
+#[derive(Debug,PartialEq)]
+struct BarFoo;
+
+// 下面的代码实现了自定义类型的相加： Foo + Bar = FooBar
+impl ops::Add<Bar> for Foo {
+    type Output = FooBar;
+
+    fn add(self, _rhs: Bar) -> FooBar {
+        FooBar
+    }
+}
+
+impl ops::Sub<Bar> for Foo {
+    type Output = BarFoo;
+
+    fn sub(self, _rhs: Bar) -> BarFoo {
+        BarFoo
+    }
+}
+fn main() {
+    // 不要修改下面代码
+    // 你需要为 FooBar 派生一些特征来让代码工作
+    assert_eq!(Foo+Bar, FooBar);
+    assert_eq!(Foo-Bar, BarFoo);
+
+    println!("Success!")
+}
+6.
+Rust不仅可以为结构体实现方法，也可以为枚举实现，实现的方式与结构体相同
+7.
+fn hatch_a_bird(n:i32)->Box<dyn Bird> {
+    match n {
+        i32::MIN..=1 =>Box::new(Swan),
+        2..=i32::MAX =>Box::new(Duck),
+    }
+}
+
+let birds:Vec<Box<dyn Bird>> = vec![Box::new(Duck),Box::new(Swan)];
+
+8.
+静态分发和动态分发Static and Dynamic dispatch
+泛型属于静态分发，即泛型是在编译期完成处理的；
+Box<dyn Trait> &dyn Trait 属于动态分发，直到运行时，才能确定需要调用什么方法
+
+9.
+
+struct Container(i32, i32);
+
+// 使用关联类型实现重新实现以下特征
+// trait Contains {
+//    type A;
+//    type B;
+
+trait Contains {
+    type A;
+    type B;
+    fn contains(&self, _: &Self::A, _: &Self::B) -> bool;
+    fn first(&self) -> i32;
+    fn last(&self) -> i32;
+}
+
+impl Contains for Container {
+    type A = i32;
+    type B = i32;
+    fn contains(&self, number_1: &Self::A, number_2: &Self::B) -> bool {
+        (&self.0 == number_1) && (&self.1 == number_2)
+    }
+    // Grab the first number.
+    fn first(&self) -> i32 { self.0 }
+
+    // Grab the last number.
+    fn last(&self) -> i32 { self.1 }
+}
+
+fn difference<C: Contains>(container: &C) -> i32 {
+    container.last() - container.first()
+}
+
+fn main() {
+    let number_1 = 3;
+    let number_2 = 10;
+
+    let container = Container(number_1, number_2);
+
+    println!("Does container contain {} and {}: {}",
+        &number_1, &number_2,
+        container.contains(&number_1, &number_2));
+    println!("First number: {}", container.first());
+    println!("Last number: {}", container.last());
+    
+    println!("The difference is: {}", difference(&container));
+}
+
+10.
+// 用三种方法填空: 其中两种使用默认的泛型参数，另外一种不使用
+impl<T:Sub<Output=T>> Sub for Point<T> {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self::Output {
+        Point {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
+    }
+}
+
+11.
+for (i, c) in s.char_indices()
+for item in s.chars()
+
+12.
+切片和 `&Vec` 是不同的类型，后者仅仅是 `Vec` 的引用，并可以通过解引用直接获取 `Vec`
+let v = Vec::from([1,2,3]); //这是Vec
+let v_ref = &v; //这是Vec的不可变引用
+let v_ref = &mut v; //这是Vec的可变引用
+                            ↑上述两种引用都可以解引用
+let v_slice = &v[..]; //这是Vec的切片,是[T;usize]的array，T和usize都固定，并且只读
+
+13.
+let mut hm:HashMap<&str,i32> = HashMap::new();
+hm.insert("a",1);
+hm.insert("b",2);
+let value_a:i32 = hm["a"];      //此处返回的是i32,不能用于修改
+let value_b:&i32 = hm.entry("a").or_insert(0);      //此处返回的是value的引用，修改需要使用引用的value
+
+14.
+let mut player_stats:HashMap<String,i32> = HashMap::new();
+
+// 查询指定的 key, 若不存在时，则插入新的 kv 值
+player_stats.entry("health".to_string()).or_insert(100);
+println!("{:?}",player_stats.get("health")) ;
+//此处HashMap的key类型为String, HashMap::get(key)中key为&str        为什么呢

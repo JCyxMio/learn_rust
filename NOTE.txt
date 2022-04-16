@@ -1,0 +1,79 @@
+1.
+引用和解引用
+let s = String::from("hello");
+let s1 = &s;     //引用
+println!("{}",*s1); //解引用
+assert_eq!("hello",*s1);    //解引用
+
+2.
+println!("{}",s1);与println!("{}",&s);同样可以正常的编译成功，是因为rust内部对部分宏做了优化
+
+3.
+#![allow(unused_variables)] // 允许未使用变量不提示警告
+
+#[allow(dead_code)] //允许未使用代码（dead_code）
+
+unimplemented!()    //待完善代码，执行到此处会直接是程序崩溃
+todo!() //待完善代码，执行到此处会直接是程序崩溃
+
+4.
+assert_eq!((1..5), Range{ start: 1, end: 5 });      //1..5    Range{ start: 1, end: 5 }   等价
+assert_eq!((1..=5), RangeInclusive::new(1, 5));     //1..=5   RangeInclusive::new(1, 5)     等价
+
+5.
+let slice = &s[0..2];
+let slice = &s[..2];    //上下等价          s = "hello"
+
+let slice = &s[4..length]
+let slice = &s[4..]         //上下等价
+
+let slice = &s[0..length]   
+let slice = &s[..]      //上下等价
+
+※重要！！！！
+切片和 `&Vec` 是不同的类型，后者仅仅是 `Vec` 的引用，并可以通过解引用直接获取 `Vec`
+let v = Vec::from([1,2,3]); //这是Vec
+let v_ref = &v; //这是Vec的不可变引用
+let v_ref = &mut v; //这是Vec的可变引用
+                            ↑上述两种引用都可以解引用
+let v_slice = &v[..]; //这是Vec的切片,是[T;usize]的array，T和usize都固定，并且只读
+
+6.
+！！！中文在 UTF-8 中占用三个字节，切片的索引必须落在字符之间的边界位置
+
+7.
+s.replace(sample,newstr);s.replacen(sample,newstr,times)    //返回新的String,声明s不必要mut,times表示替换次数，replace会替换所有
+s.replace_range(Range,newstr)   //修改原String,声明修改对象时必须mut, s:mut String , Range 修改范围，newstr 修改字符串内容(&str)
+
+s.pop()     //修改原String，必须mut，返回被删除的最后一个字符(Option类型)，如果String长度为0，返回None(Option类型)
+clear()     //修改原String，必须mut，清空，无返回值
++ add(self,&str)    //self的所有权会发生转移，+或者add()执行完成后，self会被释放（无法调用self）。加号左边必须为String,右边必须为字符串引用切片(&str) 返回值为新的字符串（String），所以无需self为mut
+format!("{},{}",String,&str)    //连接字符串，返回新的字符串,可以连接任意string与&str
+s.chars()           //返回Chars<> 
+
+8.
+使用泛型参数前，依然需要提前声明：impl<T>，只有提前声明了，我们才能在Point<T>中使用它，这样 Rust 就知道
+ Point 的尖括号中的类型是泛型而不是具体类型。需要注意的是，这里的 Point<T> 不再是泛型声明，而是一个完整的结构体类型，
+ 因为我们定义的结构体就是 Point<T> 而不再是 Point。
+
+9.
+Rust不仅可以为结构体实现方法，也可以为枚举实现，实现的方式与结构体相同
+
+10.
+静态分发和动态分发Static and Dynamic dispatch
+泛型属于静态分发，即泛型是在编译期完成处理的；
+Box<dyn Trait> &dyn Trait 属于动态分发，直到运行时，才能确定需要调用什么方法
+
+11.
+let mut hm:HashMap<&str,i32> = HashMap::new();
+hm.insert("a",1);
+hm.insert("b",2);
+let value_a:i32 = hm["a"];      //此处返回的是i32,不能用于修改
+let value_b:&i32 = hm.entry("a").or_insert(0);      //此处返回的是value的引用，修改需要使用引用的value
+
+12.
+let mut player_stats:HashMap<String,i32> = HashMap::new();
+
+// 查询指定的 key, 若不存在时，则插入新的 kv 值
+player_stats.entry("health".to_string()).or_insert(100);
+println!("{:?}",player_stats.get("health")) ;
