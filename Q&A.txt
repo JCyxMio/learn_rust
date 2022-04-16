@@ -239,4 +239,6 @@ let mut player_stats:HashMap<String,i32> = HashMap::new();
 // 查询指定的 key, 若不存在时，则插入新的 kv 值
 player_stats.entry("health".to_string()).or_insert(100);
 println!("{:?}",player_stats.get("health")) ;
-//此处HashMap的key类型为String, HashMap::get(key)中key为&str        为什么呢
+//此处HashMap的key类型为String, HashMap::get(key)中key为&str       
+
+//点操作符的自动引用、自动解引用，强制类型转换直到类型能匹配等

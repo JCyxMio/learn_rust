@@ -10,9 +10,8 @@ println!("{}",s1);与println!("{}",&s);同样可以正常的编译成功，是�
 
 3.
 #![allow(unused_variables)] // 允许未使用变量不提示警告
-
+#![allow(overflowing_literals)] // 允许越界
 #[allow(dead_code)] //允许未使用代码（dead_code）
-
 unimplemented!()    //待完善代码，执行到此处会直接是程序崩溃
 todo!() //待完善代码，执行到此处会直接是程序崩溃
 
@@ -51,6 +50,9 @@ clear()     //修改原String，必须mut，清空，无返回值
 format!("{},{}",String,&str)    //连接字符串，返回新的字符串,可以连接任意string与&str
 s.chars()           //返回Chars<> 
 
+for (i, c) in s.char_indices()
+for item in s.chars()
+
 8.
 使用泛型参数前，依然需要提前声明：impl<T>，只有提前声明了，我们才能在Point<T>中使用它，这样 Rust 就知道
  Point 的尖括号中的类型是泛型而不是具体类型。需要注意的是，这里的 Point<T> 不再是泛型声明，而是一个完整的结构体类型，
@@ -63,7 +65,16 @@ Rust不仅可以为结构体实现方法，也可以为枚举实现，实现的�
 静态分发和动态分发Static and Dynamic dispatch
 泛型属于静态分发，即泛型是在编译期完成处理的；
 Box<dyn Trait> &dyn Trait 属于动态分发，直到运行时，才能确定需要调用什么方法
+※重要！！！！
+不是所有特征都能拥有特征对象，只有对象安全的特征才行。当一个特征的所有方法都有如下属性时，它的对象才是安全的：
 
+方法的返回类型不能是 Self
+方法没有任何泛型参数
+对象安全对于特征对象是必须的，因为一旦有了特征对象，就不再需要知道实现该特征的具体类型是什么了。如果特征方法返回了具体的 Self 类型，
+但是特征对象忘记了其真正的类型，那这个 Self 就非常尴尬，因为没人知道它是谁了。但是对于泛型类型参数来说，当使用特征时其会放入具体的类型参数：
+此具体类型变成了实现该特征的类型的一部分。而当使用特征对象时其具体类型被抹去了，故而无从得知放入泛型参数类型到底是什么。
+例如Clone 特性就是非安全的
+※重要！！！！
 11.
 let mut hm:HashMap<&str,i32> = HashMap::new();
 hm.insert("a",1);
@@ -77,3 +88,19 @@ let mut player_stats:HashMap<String,i32> = HashMap::new();
 // 查询指定的 key, 若不存在时，则插入新的 kv 值
 player_stats.entry("health".to_string()).or_insert(100);
 println!("{:?}",player_stats.get("health")) ;
+
+13.
+#[derive(Clone)]
+struct Container<T>(Arc<T>);
+
+fn clone_containers<T>(foo: &Container<i32>, bar: &Container<T>) {
+    let foo_cloned:Container<i32> = foo.clone();
+    let bar_cloned:&Container<T> = bar.clone();
+}
+#[derive(Clone)]的本质是下面的代码
+impl<T> Clone for Container<T> where T: Clone {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
+虽然为Container<T>添加了#[derive(Clone)]。但代码中Container<T>是否能clone取决于T是否能clone
